@@ -24,8 +24,12 @@ class ServidorWebSimple
     static async Task Main(string[] args)
     {
         currentDirectory = Directory.GetCurrentDirectory();
+        Console.WriteLine($"Directorio actual: {currentDirectory}");
+        // CHEQUEAR POR QUË NO ANDAN LOS RELATIVE PATHS EN VISUAL STUDIO
         rootDirectory = File.ReadAllText(Path.Combine(currentDirectory, "configuracion", "archivos_config.txt")).Trim();
-        port = int.Parse(File.ReadAllText(Path.Combine(currentDirectory, "configuracion", "puerto_config.txt")).Trim());   
+        port = int.Parse(File.ReadAllText(Path.Combine(currentDirectory, "configuracion", "puerto_config.txt")).Trim());
+        //rootDirectory = File.ReadAllText("C:\\Users\\pamel\\OneDrive\\Documentos\\pame\\IFTS11\\2024_parte1\\ProgSobreRedes\\ProyectoFinal\\ServidorWeb\\ServidorWebSimple\\ServidorWebSimple\\ServidorWebSimple\\configuracion\\archivos_config.txt").Trim();
+        //port = int.Parse(File.ReadAllText("C:\\Users\\pamel\\OneDrive\\Documentos\\pame\\IFTS11\\2024_parte1\\ProgSobreRedes\\ProyectoFinal\\ServidorWeb\\ServidorWebSimple\\ServidorWebSimple\\ServidorWebSimple\\configuracion\\puerto_config.txt").Trim());
 
 
         // Bloque try-catch para manejar excepciones de conexión al iniciar el servidor
@@ -108,6 +112,14 @@ class ServidorWebSimple
         // OK, esto funciona, se puede leer el método y la ruta
         Console.WriteLine($"PRUEBA DE LECTURA - Método: {method}, Ruta: {path}, Directorio raiz: {rootDirectory}");
 
+        string filePath = Path.Combine(currentDirectory, rootDirectory, path);
+        //Console.WriteLine($"PRUEBA DE LECTURA - filePath CON /: {filePath}");
+
+        // ES IGUAL
+        //string filePathCORTO = Path.Combine(rootDirectory, path.TrimStart('/'));
+        //Console.WriteLine($"PRUEBA DE LECTURA - filePathCORTO sin /: {filePath}");
+
+
         // Crear la respuesta HTTP
         // ESTA RESPUESTA HTTP FUNCIONA; TRATAR DE LLAMARLA DESDE EL IF Y ADAPTAR SEGUN  EL CASO
         /*
@@ -122,25 +134,55 @@ class ServidorWebSimple
         */
 
         // TRATAR DE METER LOS ARCHIVOS CORRESPONDIENETS SEGUN EL CASO ACA ABAJO
+        // PROBAR crear en algún lado un FileStrean manejadorDeArchivos = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+        //FileStrean manejadorDeArchivos = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+        // OR
+        string archivoDefault = File.ReadAllText(Path.Combine(currentDirectory, rootDirectory, "index.html")).Trim();
+        string archivoError = File.ReadAllText(Path.Combine(currentDirectory, rootDirectory, "error_404.html")).Trim();
+        // AH! Volver a probar, me habí afaltado el Path.Combine
+        //string archivoExistente = File.ReadAllText(Path.Combine(currentDirectory, rootDirectory, filePath)).Trim();
+
         if (method == "GET")
         {
-            if (path == "/")
+            if (path == "/" || path == null)
             {
-                Console.WriteLine("Metodo GET y path / - Solicitud de la página de inicio.");
+                // IT WORKS!
+                Console.WriteLine("Metodo GET y path / o null - Solicitud de la página de inicio.");
+                string httpResponse = $"HTTP/1.1 200 OK\nContent-Type: text/html; charset=UTF-8\n\n{archivoDefault}";
+                byte[] response = Encoding.UTF8.GetBytes(httpResponse);
+                await stream.WriteAsync(response, 0, response.Length);
+                Console.WriteLine("\nRespuesta enviada al cliente.\n");
+                Console.WriteLine($"Mensaje enviado:\n{httpResponse}\n --- fin del mensaje enviado ---\n\n");
+                
             }
             else
             {
-                string filePath = Path.Combine(currentDirectory, rootDirectory, path);
-                //string filePath = Path.Combine(rootDirectory, path.TrimStart('/'));
+                // PROBAR if filepath(true)
+                // PROBAR if filepath(false)
                 if (File.Exists(filePath))
                 {
-                    //await ServirArchivo(filePath, stream);
                     Console.WriteLine("Enviar el archivo solicitado existente");
+                    // PROBAR 
+                    /*
+                    string httpResponse = $"HTTP/1.1 200 OK\nContent-Type: text/html; charset=UTF-8\n\n{archivoExistente}";
+                    byte[] response = Encoding.UTF8.GetBytes(httpResponse);
+                    await stream.WriteAsync(response, 0, response.Length);
+                    Console.WriteLine("\nRespuesta enviada al cliente.\n");
+                    Console.WriteLine($"Mensaje enviado:\n{httpResponse}\n --- fin del mensaje enviado ---\n\n");
+                    */
                 }
                 else
                 {
-                    //await ServirArchivo("error_404.html", stream, 404);
+                    // IT WORKS!
                     Console.WriteLine("Metodo GET y path inexistenete en el directorio - Enviar el archivo personalizado 404");
+                    // CORREGIR PARA QUE SOLO LO HAGA SI EL FILE NO EXISTE,
+                    // NO ES EXACTAMENTE UN ELSE
+                    string httpResponse = $"HTTP/1.1 404 Not Found\nContent-Type: text/html; charset=UTF-8\n\n{archivoError}";
+                    byte[] response = Encoding.UTF8.GetBytes(httpResponse);
+                    await stream.WriteAsync(response, 0, response.Length);
+                    Console.WriteLine("\nRespuesta enviada al cliente.\n");
+                    Console.WriteLine($"Mensaje enviado:\n{httpResponse}\n --- fin del mensaje enviado ---\n\n");
+
                 }
             }
         }
