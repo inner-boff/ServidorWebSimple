@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ServidorWebSimple")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4c161c66568c2fe43b5678569159c70ffb14ff4d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b29a89659a2f3b10937086ea1eefde374fe49ecc")]
 [assembly: System.Reflection.AssemblyProductAttribute("ServidorWebSimple")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ServidorWebSimple")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
