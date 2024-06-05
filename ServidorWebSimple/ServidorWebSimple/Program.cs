@@ -18,6 +18,13 @@ class ServidorWebSimple
     private static TcpClient clienteTCP;
     private static string currentDirectory;
 
+    // añadidos para la compresión
+    private static byte[] fileBytes;
+    private static MemoryStream compressedStream;
+    private static GZipStream gzipStream;
+    private static byte[] compressedBytes;
+    
+
     // Método Main asíncrono
     static async Task Main(string[] args)
     {
@@ -135,10 +142,8 @@ class ServidorWebSimple
         {
             if (path == "/" || path == null)
             {
+                // envolver lo debajo en la misma solucion que archivo existente para que use compresion con gzip
                 string archivoDefault = File.ReadAllText(Path.Combine(currentDirectory, rootDirectory, "index.html")).Trim();
-                string pathArchivoDefault = Path.Combine(currentDirectory, rootDirectory, "index.html");
-
-                //ServirArchivoComprimido(pathArchivoDefault, stream);
 
                 // Ahora hay que tratar de envolver esto para que use compresion con gzip
                 // Respuesta HTTP del servidor al cliente
@@ -153,15 +158,41 @@ class ServidorWebSimple
 
                 if (File.Exists(filePathCompleto))
                 {
-                   // Console.WriteLine("PRUEBA - Debería dar TRUE " + File.Exists(filePathCompleto));
-                    string archivoExistente = File.ReadAllText(Path.Combine(currentDirectory, rootDirectory, fileName)).Trim();
-                    
-                    // Respuesta HTTP del servidor al cliente
-                    string httpResponse = $"HTTP/1.1 200 OK\nContent-Type: text/html; charset=UTF-8\n\n{archivoExistente}";
-                    byte[] response = Encoding.UTF8.GetBytes(httpResponse);
-                    await stream.WriteAsync(response, 0, response.Length);
-                    // Escribir respuesta en consola
-                    Console.WriteLine($"\n**Respuesta enviada al cliente**.\nMensaje enviado:\n{httpResponse}\n --- fin del mensaje enviado ---\n\n");
+                    // Leer el contenido del archivo existente como bytes
+                    byte[] fileBytes = await File.ReadAllBytesAsync(filePathCompleto);
+
+                    // Crear una memoria en buffer para almacenar los datos comprimidos
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        // Usar GZipStream para comprimir los datos y escribirlos en la memoria en buffer
+                        using (var gzipStream = new GZipStream(memoryStream, CompressionMode.Compress))
+                        {
+                            await gzipStream.WriteAsync(fileBytes, 0, fileBytes.Length);
+                        }
+                        
+                        // Convertir el contenido comprimido a un array de bytes
+                        byte[] compressedBytes = memoryStream.ToArray();
+
+                        // incluir la respuesta HTTP con los encabezados necesarios
+                        string httpResponseHeaders = "HTTP/1.1 200 OK\r\n" +
+                                              "Content-Encoding: gzip\r\n" +
+                                              "Content-Type: text/html; charset=UTF-8\r\n" +
+                                              $"Content-Length: {compressedBytes.Length}\r\n" +
+                                              "\r\n";
+
+                        // Convertir los encabezados HTTP a bytes
+                        byte[] responseHeaders = Encoding.UTF8.GetBytes(httpResponseHeaders);
+
+                        // Enviar los encabezados HTTP al cliente
+                        await stream.WriteAsync(responseHeaders, 0, responseHeaders.Length);
+
+                        // Enviar el contenido comprimido al cliente
+                        await stream.WriteAsync(compressedBytes, 0, compressedBytes.Length);
+
+                        // Escribir respuesta en consola
+                        Console.WriteLine($"\n**Respuesta enviada al cliente**.\nEncabezados enviados:\n{httpResponseHeaders}\n --- fin de los encabezados enviados ---\n\n");
+                    }
+
 
                 }
                 else
@@ -195,55 +226,6 @@ class ServidorWebSimple
     }
 
 
-
-    // Escribe una funcion que se encargue de servir un archivo y los comprima en gzip
-    // Debe devolver un código de estado 200 si el archivo se sirvió correctamente
-    // Debe devolver un código de estado 404 si el archivo no se encontró
-    // Debe devolver un código de estado 500 si hubo un error al servir el archivo
-    // Escribe abajo la funcion
-    
-
-    // Función que se encarga de servir un archivo
-    // El archivo debe estar comprimido con gzip
-    // ver ejemplo en prueba.cs
-    // Debe devolver un código de estado 200 si el archivo se sirvió correctamente
-    /*
-    private static async Task ServirArchivoComprimido(string filePath, NetworkStream stream, int statusCode = 200)
-    {
-        byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
-
-        using (MemoryStream memoryStream = new MemoryStream())
-        {
-            using (GZipStream gzipStream = new GZipStream(memoryStream, CompressionMode.Compress))
-            {
-                await gzipStream.WriteAsync(fileBytes, 0, fileBytes.Length);
-            }
-
-            byte[] compressedBytes = memoryStream.ToArray();
-
-            // Agregar las cabeceras necesarias para que el archivo se pueda ver en el navegador
-            string httpResponse = $"HTTP/1.1 {statusCode} OK\nContent-Type: text/html; charset=UTF-8\nContent-Encoding: gzip\nContent-Length: {compressedBytes.Length}\n\n";
-            byte[] responseHeaders = Encoding.UTF8.GetBytes(httpResponse);
-
-            await stream.WriteAsync(responseHeaders, 0, responseHeaders.Length);
-            await stream.WriteAsync(compressedBytes, 0, compressedBytes.Length);
-        }
-
-        Console.WriteLine($"Archivo {filePath} comprimido y servido correctamente.");
-    }
-    */
-
-
-    
-    
-
-
-
-    // Fución que lee la respuesta del servidor
-    // ME PARECE QUE NO HACE FALTA ESTA FUNCIÓN
-    // Debe leer la respuesta del servidor y devolverla como un string
-    // Debe devolver un string vacío si no hay respuesta o es nula
-    // Debe usar NetworkStream para leer la respuesta del servido
 
     // Función que loguea datos de las solicitudes y respuestas segun el tipo de solicitud GET o POST
     // Debe loguear la fecha y hora de la solicitud, el método, la ruta, el código de respuesta y el tamaño de la respuesta
