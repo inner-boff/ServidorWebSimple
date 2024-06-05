@@ -16,8 +16,6 @@ class ServidorWebSimple
     private static IPAddress localIPAddress = IPAddress.Parse("127.0.0.1");
     private static TcpListener servidor;
     private static TcpClient clienteTCP;
-    //private static HttpClient clienteHttp;
-    //private static NetworkStream stream = clienteTCP.GetStream();
     private static string currentDirectory;
 
     // Método Main asíncrono
@@ -28,6 +26,7 @@ class ServidorWebSimple
         // CHEQUEAR POR QUË NO ANDAN LOS RELATIVE PATHS EN VISUAL STUDIO
         rootDirectory = File.ReadAllText(Path.Combine(currentDirectory, "configuracion", "archivos_config.txt")).Trim();
         port = int.Parse(File.ReadAllText(Path.Combine(currentDirectory, "configuracion", "puerto_config.txt")).Trim());
+        // En Visual Studio usar las rutas de abajo
         //rootDirectory = File.ReadAllText("C:\\Users\\pamel\\OneDrive\\Documentos\\pame\\IFTS11\\2024_parte1\\ProgSobreRedes\\ProyectoFinal\\ServidorWeb\\ServidorWebSimple\\ServidorWebSimple\\ServidorWebSimple\\configuracion\\archivos_config.txt").Trim();
         //port = int.Parse(File.ReadAllText("C:\\Users\\pamel\\OneDrive\\Documentos\\pame\\IFTS11\\2024_parte1\\ProgSobreRedes\\ProyectoFinal\\ServidorWeb\\ServidorWebSimple\\ServidorWebSimple\\ServidorWebSimple\\configuracion\\puerto_config.txt").Trim());
 
@@ -37,45 +36,33 @@ class ServidorWebSimple
         try
         {
             await IniciarServidor();
+
+             while (true)
+            {
+                // Esperar a que un clienteTCP se conecte
+                // El método AcceptTcpClientAsync devuelve un objeto TcpClient que representa al clienteTCP conectado
+                // Este loop hace que el servidor pueda aceptar múltiples conexiones
+                clienteTCP = await servidor.AcceptTcpClientAsync();
+                Console.WriteLine("¡Cliente conectado!");
+
+
+                // Obtener el stream de la conexión con el clienteTCP
+                // Esto permite leer y escribir datos en la conexión
+                // Lo usamos luego en ManejarSolicitud() para enviar respuesta 
+                NetworkStream stream = clienteTCP.GetStream();
+                byte[] buffer = new byte[1024];
+                // Esperar a que el clienteTCP envíe datos
+                int bytes = await stream.ReadAsync(buffer, 0, buffer.Length);
+                string httpRequest = Encoding.UTF8.GetString(buffer, 0, bytes);
+                Console.WriteLine($"Mensaje recibido:\n{httpRequest}--- fin del mensaje recibido ---\n\n");
+                // probar si se puede llamar a la función ManejarSolicitud() sin el task.run
+                ManejarSolicitud(httpRequest,stream);
+                //_ = Task.Run(() => ManejarSolicitud(httpRequest,stream));
+            }
         }
         catch (Exception e)
         {
             Console.WriteLine($"Error: {e.Message}");
-        }
-
-
-        while (true)
-        {
-            // Esperar a que un clienteTCP se conecte
-            // El método AcceptTcpClientAsync devuelve un objeto TcpClient que representa al clienteTCP conectado
-            // Este loop hace que el servidor pueda aceptar múltiples conexiones
-            clienteTCP = await servidor.AcceptTcpClientAsync();
-            Console.WriteLine("¡Cliente conectado!");
-
-
-            // Obtener el stream de la conexión con el clienteTCP
-            // OJO: esto permite leer y escribir datos en la conexión
-            // Así que puedo usarlo paar enviar respuesta
-            NetworkStream stream = clienteTCP.GetStream();
-            byte[] buffer = new byte[1024];
-            // Esperar a que el clienteTCP envíe datos
-            // OJO, AQUI ABAJO ESTÄ SALTANDO UNA EXECPCION NO MANEJADA
-            // ystem.Net.Sockets.SocketException (995): Se ha forzado la interrupción de una conexión existente por el host remoto
-            // INTENTAR METER EN UN TRY CATCH Y VER QUE PASA
-            int bytes = await stream.ReadAsync(buffer, 0, buffer.Length);
-            string httpRequest = Encoding.UTF8.GetString(buffer, 0, bytes);
-            Console.WriteLine($"Mensaje recibido:\n{httpRequest}--- fin del mensaje recibido ---\n\n");
-
-            // HTTP RESPONSE TEST
-            // TRATAR DE ARMAR ESTAS RESPUESTAS DIRECTAMENTE EN MANEJAR SOLICITUDES; PORQUE DEPENDE DEL TIPO DE SOLICITUD
-            /*
-            string httpResponse = "HTTP/1.1 200 OK\nContent-Type: text/html; charset=UTF-8\n\n<html>Respuesta OK - HTML<h1><h1></html>";
-            byte[] response = Encoding.UTF8.GetBytes(httpResponse);
-            await stream.WriteAsync(response, 0, response.Length);
-            Console.WriteLine("Respuesta enviada al clienteTCP.\n\n");
-            Console.WriteLine($"Mensaje enviado:\n{httpResponse}\n --- fin del mensaje enviado ---\n\n");
-            */
-            _ = Task.Run(() => ManejarSolicitud(httpRequest,stream));
         }
     }
 
@@ -97,107 +84,110 @@ class ServidorWebSimple
         string method = requestLineParts[0];
         string path = requestLineParts[1];
 
+        // Eliminar el caracter '/' del principio de la ruta para obtener el nombre del archivo
+        string fileName = path.TrimStart('/');
+
+        // Combinar el directorio actual, el directorio raíz y la ruta para obtener la ruta completa del archivo
+        // Corregir para que ioncluya el directorio actual
+        //string filePathCorto = Path.Combine(currentDirectory, rootDirectory, path);
+        // Listo: el problema estaba en que no estaba sumando el current directory al path porque Path.Combine no lo hace si está presente un / en el path (en este caso lo tenía porque venía de la solicitud http)
+        string filePathCompleto = Path.Combine(currentDirectory, rootDirectory, fileName);
+
         /*
-      * Una solicitud se ve así (para tener referencia de lo que stá pasando arriba):
+      * Una solicitud se ve así (para tener referencia de lo que stá pasando arriba):4
+
+        Desde Postman:
          GET / HTTP/1.1
          User-Agent: PostmanRuntime/7.39.0
-         Accept: *{/}* //
+         Accept:  //
          Postman - Token: 9bd2d3b2 - f428 - 43e1 - bf62 - 3af50edffedc
          Host: localhost: 7575
          Accept - Encoding: gzip, deflate, br
          Connection: keep - alive
+
+        Desde el navegador:
+        GET / HTTP/1.1
+        Host: localhost:7575
+        Connection: keep-alive
+        sec-ch-ua: "Google Chrome";v="125", "Chromium";v="125", "Not.A/Brand";v="24"
+        sec-ch-ua-mobile: ?0
+            sec-ch-ua-platform: "Windows"
+        Upgrade-Insecure-Requests: 1
+        User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36
+        Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*{/}*;q=0.8,application/signed-exchange;v=b3;q=0.7
+        Sec-Fetch-Site: none
+        Sec-Fetch-Mode: navigate
+        Sec-Fetch-User: ?1
+        Sec-Fetch-Dest: document
+        Accept-Encoding: gzip, deflate, br, zstd
+        Accept-Language: en-US,en;q=0.9,es-AR;q=0.8,es-VE;q=0.7,es;q=0.6
         */
 
-        // Probando que pueden leerse los valores de las variables
-        // OK, esto funciona, se puede leer el método y la ruta
-        Console.WriteLine($"PRUEBA DE LECTURA - Método: {method}, Ruta: {path}, Directorio raiz: {rootDirectory}");
-
-        string filePath = Path.Combine(currentDirectory, rootDirectory, path);
-        //Console.WriteLine($"PRUEBA DE LECTURA - filePath CON /: {filePath}");
-
-        // ES IGUAL
-        //string filePathCORTO = Path.Combine(rootDirectory, path.TrimStart('/'));
-        //Console.WriteLine($"PRUEBA DE LECTURA - filePathCORTO sin /: {filePath}");
+        // Pruebas de lectura de solicitud HTTP y variables - BORRAR ANTES DE ENTREGAR
+        //Console.WriteLine($"PRUEBA DE LECTURA - SOLICITUD HTTP- Método: {method}, Ruta (path): {path}, Directorio raiz: {rootDirectory}");
+        //Console.WriteLine($"PRUEBA DE LECTURA - VARIABLES VARIAS - \ncurrendDirectory: {currentDirectory} \nrootDirectory: {rootDirectory} \npath: {path}\nfilePathCompleto (debe incluir el current directory): {filePathCompleto} \nfileName (no debe incluir /): {fileName}\n FIN PRUEBA DE LECTURA\n\n");
+        //Console.WriteLine($"PRUEBA DE LECTURA -filePathCorto (debe incluir /): {filePathCorto}");
+        
 
 
-        // Crear la respuesta HTTP
-        // ESTA RESPUESTA HTTP FUNCIONA; TRATAR DE LLAMARLA DESDE EL IF Y ADAPTAR SEGUN  EL CASO
-        /*
-        string HttpStatusCode = "200";
-        string HttpResponseMessage = "OK";
-        string body = "body test desde manejo de solicitudes";
-        string httpResponse = $"HTTP/1.1 {HttpStatusCode} {HttpResponseMessage}\nContent-Type: text/html; charset=UTF-8\n\n{body}";
-        byte[] response = Encoding.UTF8.GetBytes(httpResponse);
-        await stream.WriteAsync(response, 0, response.Length);
-        Console.WriteLine("\nRespuesta enviada al cliente.\n");
-        Console.WriteLine($"Mensaje enviado:\n{httpResponse}\n --- fin del mensaje enviado ---\n\n");
-        */
-
-        // TRATAR DE METER LOS ARCHIVOS CORRESPONDIENETS SEGUN EL CASO ACA ABAJO
-        // PROBAR crear en algún lado un FileStrean manejadorDeArchivos = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-        //FileStrean manejadorDeArchivos = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-        // OR
-        string archivoDefault = File.ReadAllText(Path.Combine(currentDirectory, rootDirectory, "index.html")).Trim();
-        string archivoError = File.ReadAllText(Path.Combine(currentDirectory, rootDirectory, "error_404.html")).Trim();
-        // AH! Volver a probar, me habí afaltado el Path.Combine
-        //string archivoExistente = File.ReadAllText(Path.Combine(currentDirectory, rootDirectory, filePath)).Trim();
-
+        // Manejar la solicitud según el método (GET o POST)
         if (method == "GET")
         {
             if (path == "/" || path == null)
             {
-                // IT WORKS!
-                Console.WriteLine("Metodo GET y path / o null - Solicitud de la página de inicio.");
+                string archivoDefault = File.ReadAllText(Path.Combine(currentDirectory, rootDirectory, "index.html")).Trim();
+                string pathArchivoDefault = Path.Combine(currentDirectory, rootDirectory, "index.html");
+
+                //ServirArchivoComprimido(pathArchivoDefault, stream);
+
+                // Ahora hay que tratar de envolver esto para que use compresion con gzip
+                // Respuesta HTTP del servidor al cliente
                 string httpResponse = $"HTTP/1.1 200 OK\nContent-Type: text/html; charset=UTF-8\n\n{archivoDefault}";
                 byte[] response = Encoding.UTF8.GetBytes(httpResponse);
                 await stream.WriteAsync(response, 0, response.Length);
-                Console.WriteLine("\nRespuesta enviada al cliente.\n");
-                Console.WriteLine($"Mensaje enviado:\n{httpResponse}\n --- fin del mensaje enviado ---\n\n");
-                
+                // Escribir respuesta en consola
+                Console.WriteLine($"\n**Respuesta enviada al cliente**.\nMensaje enviado:\n{httpResponse}\n --- fin del mensaje enviado ---\n\n");
             }
             else
             {
-                // PROBAR if filepath(true)
-                // PROBAR if filepath(false)
-                if (File.Exists(filePath))
+
+                if (File.Exists(filePathCompleto))
                 {
-                    Console.WriteLine("Enviar el archivo solicitado existente");
-                    // PROBAR 
-                    /*
+                   // Console.WriteLine("PRUEBA - Debería dar TRUE " + File.Exists(filePathCompleto));
+                    string archivoExistente = File.ReadAllText(Path.Combine(currentDirectory, rootDirectory, fileName)).Trim();
+                    
+                    // Respuesta HTTP del servidor al cliente
                     string httpResponse = $"HTTP/1.1 200 OK\nContent-Type: text/html; charset=UTF-8\n\n{archivoExistente}";
                     byte[] response = Encoding.UTF8.GetBytes(httpResponse);
                     await stream.WriteAsync(response, 0, response.Length);
-                    Console.WriteLine("\nRespuesta enviada al cliente.\n");
-                    Console.WriteLine($"Mensaje enviado:\n{httpResponse}\n --- fin del mensaje enviado ---\n\n");
-                    */
+                    // Escribir respuesta en consola
+                    Console.WriteLine($"\n**Respuesta enviada al cliente**.\nMensaje enviado:\n{httpResponse}\n --- fin del mensaje enviado ---\n\n");
+
                 }
                 else
                 {
-                    // IT WORKS!
-                    Console.WriteLine("Metodo GET y path inexistenete en el directorio - Enviar el archivo personalizado 404");
-                    // CORREGIR PARA QUE SOLO LO HAGA SI EL FILE NO EXISTE,
-                    // NO ES EXACTAMENTE UN ELSE
+                    string archivoError = File.ReadAllText(Path.Combine(currentDirectory, rootDirectory, "error_404.html")).Trim();
+                    
+                    // Respuesta HTTP del servidor al cliente
                     string httpResponse = $"HTTP/1.1 404 Not Found\nContent-Type: text/html; charset=UTF-8\n\n{archivoError}";
                     byte[] response = Encoding.UTF8.GetBytes(httpResponse);
                     await stream.WriteAsync(response, 0, response.Length);
-                    Console.WriteLine("\nRespuesta enviada al cliente.\n");
-                    Console.WriteLine($"Mensaje enviado:\n{httpResponse}\n --- fin del mensaje enviado ---\n\n");
+                    // Escribir respuesta en consola
+                    Console.WriteLine($"\n**Respuesta enviada al cliente**.\nMensaje enviado:\n{httpResponse}\n --- fin del mensaje enviado ---\n\n");
 
                 }
             }
-        }
+        }      
         else if (method == "POST")
         {
-            Console.WriteLine("Enviar respuesta adecuada para POST");
+            //Console.WriteLine("Enviar respuesta adecuada para POST");
+            // Respuesta HTTP del servidor al cliente
+            string httpResponse = $"HTTP/1.1 201 Created\nContent-Type: text/html; charset=UTF-8\n\nPOST recibido correctamente.";
+            byte[] response = Encoding.UTF8.GetBytes(httpResponse);
+            await stream.WriteAsync(response, 0, response.Length);
+            // Escribir respuesta en consola
+            Console.WriteLine($"\n**Respuesta enviada al cliente**.\nMensaje enviado:\n{httpResponse}\n --- fin del mensaje enviado ---\n\n");
         }
-            
-        
-
-
-      
-
-
-
 
         // Cerrar la conexión con el clienteTCP después de haber manejado la solicitud
         clienteTCP.Close();
@@ -205,11 +195,20 @@ class ServidorWebSimple
     }
 
 
+
+    // Escribe una funcion que se encargue de servir un archivo y los comprima en gzip
+    // Debe devolver un código de estado 200 si el archivo se sirvió correctamente
+    // Debe devolver un código de estado 404 si el archivo no se encontró
+    // Debe devolver un código de estado 500 si hubo un error al servir el archivo
+    // Escribe abajo la funcion
+    
+
     // Función que se encarga de servir un archivo
     // El archivo debe estar comprimido con gzip
     // ver ejemplo en prueba.cs
+    // Debe devolver un código de estado 200 si el archivo se sirvió correctamente
     /*
-    private static async Task ServirArchivo(string filePath, NetworkStream stream, int statusCode = 200)
+    private static async Task ServirArchivoComprimido(string filePath, NetworkStream stream, int statusCode = 200)
     {
         byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
 
@@ -222,11 +221,21 @@ class ServidorWebSimple
 
             byte[] compressedBytes = memoryStream.ToArray();
 
-            //cliente.GetStream().Write(compressedBytes, 0, compressedBytes.Length);
-            stream.Write(compressedBytes, 0, compressedBytes.Length);
+            // Agregar las cabeceras necesarias para que el archivo se pueda ver en el navegador
+            string httpResponse = $"HTTP/1.1 {statusCode} OK\nContent-Type: text/html; charset=UTF-8\nContent-Encoding: gzip\nContent-Length: {compressedBytes.Length}\n\n";
+            byte[] responseHeaders = Encoding.UTF8.GetBytes(httpResponse);
+
+            await stream.WriteAsync(responseHeaders, 0, responseHeaders.Length);
+            await stream.WriteAsync(compressedBytes, 0, compressedBytes.Length);
         }
+
+        Console.WriteLine($"Archivo {filePath} comprimido y servido correctamente.");
     }
     */
+
+
+    
+    
 
 
 
