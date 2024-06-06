@@ -49,7 +49,7 @@ class ServidorWebSimple
              while (true)
             {
                 // Esperar a que un clienteTCP se conecte
-                // El método AcceptTcpClientAsync devuelve un objeto TcpClient que representa al clienteTCP conectado
+                // El método AcceptTcpClientAsync() devuelve un objeto TcpClient que representa al clienteTCP conectado
                 // Este loop hace que el servidor pueda aceptar múltiples conexiones
                 clienteTCP = await servidor.AcceptTcpClientAsync();
                 Console.WriteLine("¡Cliente conectado!");
@@ -104,7 +104,7 @@ class ServidorWebSimple
         string filePathCompleto = Path.Combine(currentDirectory, rootDirectory, fileName);
 
         /*
-      * Una solicitud se ve así (para tener referencia de lo que stá pasando arriba):4
+      * Una solicitud se ve así (para tener referencia de lo que stá pasando arriba):
 
         Desde Postman:
          GET / HTTP/1.1
@@ -145,114 +145,26 @@ class ServidorWebSimple
         {
             if (path == "/" || path == null)
             {
-                // Meter lo de abajo en la función EnviarRespuesta
-                // Leer el contenido del archivo existente como bytes
-                byte[] fileBytes = await File.ReadAllBytesAsync(Path.Combine(currentDirectory, rootDirectory, "index.html"));
+                // Si la ruta solicitada es la raíz, enviar archivo index.html por defecto
+                string pathArchivoDefault = Path.Combine(currentDirectory, rootDirectory, "index.html");
+                await EnviarRespuesta(pathArchivoDefault,stream);
 
-                // Crear una memoria en buffer para almacenar los datos comprimidos
-                using (var memoryStream = new MemoryStream())
-                {
-                    // Usar GZipStream para comprimir los datos y escribirlos en la memoria en buffer
-                    using (var gzipStream = new GZipStream(memoryStream, CompressionMode.Compress))
-                    {
-                        await gzipStream.WriteAsync(fileBytes, 0, fileBytes.Length);
-                    }
-                        
-                    // Convertir el contenido comprimido a un array de bytes
-                    byte[] compressedBytes = memoryStream.ToArray();
-
-                    // incluir la respuesta HTTP con los encabezados necesarios
-                    string httpResponseHeaders = "HTTP/1.1 200 OK\r\n" +
-                                                "Content-Encoding: gzip\r\n" +
-                                                "Content-Type: text/html; charset=UTF-8\r\n" +
-                                                $"Content-Length: {compressedBytes.Length}\r\n" +
-                                                "\r\n";
-
-                    // Convertir los encabezados HTTP a bytes
-                    byte[] responseHeaders = Encoding.UTF8.GetBytes(httpResponseHeaders);
-
-                    // Enviar los encabezados HTTP al cliente
-                    await stream.WriteAsync(responseHeaders, 0, responseHeaders.Length);
-
-                    // Enviar el contenido comprimido al cliente
-                    await stream.WriteAsync(compressedBytes, 0, compressedBytes.Length);
-
-                    // Escribir respuesta en consola
-                    Console.WriteLine($"\n**Respuesta enviada al cliente**.\nEncabezados enviados:\n{httpResponseHeaders}\n --- fin de los encabezados enviados ---\n\n");
-                }
-                /*
-                // ARRIBA LA FORMA CON COMPRESION IDEM ABAJO (file existente)
-                // envolver lo debajo en la misma solucion que archivo existente para que use compresion con gzip
-                string archivoDefault = File.ReadAllText(Path.Combine(currentDirectory, rootDirectory, "index.html")).Trim();
-                // Ahora hay que tratar de envolver esto para que use compresion con gzip
-                // Respuesta HTTP del servidor al cliente
-                string httpResponse = $"HTTP/1.1 200 OK\nContent-Type: text/html; charset=UTF-8\n\n{archivoDefault}";
-                byte[] response = Encoding.UTF8.GetBytes(httpResponse);
-                await stream.WriteAsync(response, 0, response.Length);
-                // Escribir respuesta en consola
-                Console.WriteLine($"\n**Respuesta enviada al cliente**.\nMensaje enviado:\n{httpResponse}\n --- fin del mensaje enviado ---\n\n");
-                */
             }
             else
             {
 
                 if (File.Exists(filePathCompleto))
                 {
-
-                    // Meter lo de abajo en la función EnviarRespuesta
-                    // Leer el contenido del archivo existente como bytes
-                    byte[] fileBytes = await File.ReadAllBytesAsync(filePathCompleto);
-
-                    // Crear una memoria en buffer para almacenar los datos comprimidos
-                    using (var memoryStream = new MemoryStream())
-                    {
-                        // Usar GZipStream para comprimir los datos y escribirlos en la memoria en buffer
-                        using (var gzipStream = new GZipStream(memoryStream, CompressionMode.Compress))
-                        {
-                            await gzipStream.WriteAsync(fileBytes, 0, fileBytes.Length);
-                        }
-                        
-                        // Convertir el contenido comprimido a un array de bytes
-                        byte[] compressedBytes = memoryStream.ToArray();
-
-                        // incluir la respuesta HTTP con los encabezados necesarios
-                        string httpResponseHeaders = "HTTP/1.1 200 OK\r\n" +
-                                              "Content-Encoding: gzip\r\n" +
-                                              "Content-Type: text/html; charset=UTF-8\r\n" +
-                                              $"Content-Length: {compressedBytes.Length}\r\n" +
-                                              "\r\n";
-
-                        // Convertir los encabezados HTTP a bytes
-                        byte[] responseHeaders = Encoding.UTF8.GetBytes(httpResponseHeaders);
-
-                        // Enviar los encabezados HTTP al cliente
-                        await stream.WriteAsync(responseHeaders, 0, responseHeaders.Length);
-
-                        // Enviar el contenido comprimido al cliente
-                        await stream.WriteAsync(compressedBytes, 0, compressedBytes.Length);
-
-                        // Escribir respuesta en consola
-                        Console.WriteLine($"\n**Respuesta enviada al cliente**.\nEncabezados enviados:\n{httpResponseHeaders}\n --- fin de los encabezados enviados ---\n\n");
-                    }
-
+                    // Si el archivo solicitado existe, enviar el archivo
+                    await EnviarRespuesta(filePathCompleto,stream);
 
                 }
                 else
                 {
-                    //string archivoError = File.ReadAllText(Path.Combine(currentDirectory, rootDirectory, "error_404.html")).Trim();
+                    // Si el archivo solicitado no existe, enviar archivo personalizado con error 404
                     string pathArchivoError = Path.Combine(currentDirectory, rootDirectory, "error_404.html");
-
                     await EnviarRespuesta(pathArchivoError,stream);
                     
-                    // probar con la función EnviarRespuesta
-                    // Respuesta HTTP del servidor al cliente
-                    /*
-                    string httpResponse = $"HTTP/1.1 404 Not Found\nContent-Type: text/html; charset=UTF-8\n\n{archivoError}";
-                    byte[] response = Encoding.UTF8.GetBytes(httpResponse);
-                    await stream.WriteAsync(response, 0, response.Length);
-                    // Escribir respuesta en consola
-                    Console.WriteLine($"\n**Respuesta enviada al cliente**.\nMensaje enviado:\n{httpResponse}\n --- fin del mensaje enviado ---\n\n");
-                    */
 
                 }
             }
@@ -261,7 +173,9 @@ class ServidorWebSimple
         {
             //Console.WriteLine("Enviar respuesta adecuada para POST");
             // Respuesta HTTP del servidor al cliente
-            string httpResponse = $"HTTP/1.1 201 Created\nContent-Type: text/html; charset=UTF-8\n\nPOST recibido correctamente.";
+            //string httpResponse = $"HTTP/1.1 201 Created\nContent-Type: text/html; charset=UTF-8\n\n<!DOCTYPE html>\n<html>\n<head>\n<title>Respuesta POST</title>\n</head>\n<body>\n<h1>Respuesta POST</h1>\n<p>¡Solicitud POST recibida!</p>\n</body>\n</html>\n";
+            //string httpResponse = $"HTTP/1.1 201 Created\nContent-Type: text/html; charset=UTF-8\n\nPOST recibido correctamente.";
+            string httpResponse = $"HTTP/1.1 201 Created\nContent-Type: text/html; charset=UTF-8\n\n";
             byte[] response = Encoding.UTF8.GetBytes(httpResponse);
             await stream.WriteAsync(response, 0, response.Length);
             // Escribir respuesta en consola
@@ -274,6 +188,7 @@ class ServidorWebSimple
     }
 
 
+    // Función para enviar respuesta al cliente comprimida en con GZIP
     private static async Task EnviarRespuesta(string pathArchivo, NetworkStream stream)
     {
         // Leer el contenido del archivo existente como bytes
