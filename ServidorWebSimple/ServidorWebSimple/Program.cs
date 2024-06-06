@@ -17,6 +17,8 @@ class ServidorWebSimple
     private static TcpListener servidor;
     private static TcpClient clienteTCP;
     private static string currentDirectory;
+    //Agregado para el manejo de la conexión, pero no estoy segura si hace falta
+    private static NetworkStream stream;
 
     // añadidos para la compresión
     private static byte[] fileBytes;
@@ -90,14 +92,15 @@ class ServidorWebSimple
         string[] requestLineParts = requestLines[0].Split(' ');
         string method = requestLineParts[0];
         string path = requestLineParts[1];
+        // para loguear junto a la fecha y hora de la solicitud
+        string Host = requestLines[1].Split(' ')[1];
 
         // Eliminar el caracter '/' del principio de la ruta para obtener el nombre del archivo
         string fileName = path.TrimStart('/');
 
         // Combinar el directorio actual, el directorio raíz y la ruta para obtener la ruta completa del archivo
-        // Corregir para que ioncluya el directorio actual
-        //string filePathCorto = Path.Combine(currentDirectory, rootDirectory, path);
-        // Listo: el problema estaba en que no estaba sumando el current directory al path porque Path.Combine no lo hace si está presente un / en el path (en este caso lo tenía porque venía de la solicitud http)
+        // Corregir para que incluya el directorio actual
+        // Corregido: el problema estaba en que no estaba sumando el current directory al path porque Path.Combine no lo hace si está presente un / en el path (en este caso lo tenía porque venía de la solicitud http)
         string filePathCompleto = Path.Combine(currentDirectory, rootDirectory, fileName);
 
         /*
@@ -142,9 +145,45 @@ class ServidorWebSimple
         {
             if (path == "/" || path == null)
             {
+                // Meter lo de abajo en la función EnviarRespuesta
+                // Leer el contenido del archivo existente como bytes
+                byte[] fileBytes = await File.ReadAllBytesAsync(Path.Combine(currentDirectory, rootDirectory, "index.html"));
+
+                // Crear una memoria en buffer para almacenar los datos comprimidos
+                using (var memoryStream = new MemoryStream())
+                {
+                    // Usar GZipStream para comprimir los datos y escribirlos en la memoria en buffer
+                    using (var gzipStream = new GZipStream(memoryStream, CompressionMode.Compress))
+                    {
+                        await gzipStream.WriteAsync(fileBytes, 0, fileBytes.Length);
+                    }
+                        
+                    // Convertir el contenido comprimido a un array de bytes
+                    byte[] compressedBytes = memoryStream.ToArray();
+
+                    // incluir la respuesta HTTP con los encabezados necesarios
+                    string httpResponseHeaders = "HTTP/1.1 200 OK\r\n" +
+                                                "Content-Encoding: gzip\r\n" +
+                                                "Content-Type: text/html; charset=UTF-8\r\n" +
+                                                $"Content-Length: {compressedBytes.Length}\r\n" +
+                                                "\r\n";
+
+                    // Convertir los encabezados HTTP a bytes
+                    byte[] responseHeaders = Encoding.UTF8.GetBytes(httpResponseHeaders);
+
+                    // Enviar los encabezados HTTP al cliente
+                    await stream.WriteAsync(responseHeaders, 0, responseHeaders.Length);
+
+                    // Enviar el contenido comprimido al cliente
+                    await stream.WriteAsync(compressedBytes, 0, compressedBytes.Length);
+
+                    // Escribir respuesta en consola
+                    Console.WriteLine($"\n**Respuesta enviada al cliente**.\nEncabezados enviados:\n{httpResponseHeaders}\n --- fin de los encabezados enviados ---\n\n");
+                }
+                /*
+                // ARRIBA LA FORMA CON COMPRESION IDEM ABAJO (file existente)
                 // envolver lo debajo en la misma solucion que archivo existente para que use compresion con gzip
                 string archivoDefault = File.ReadAllText(Path.Combine(currentDirectory, rootDirectory, "index.html")).Trim();
-
                 // Ahora hay que tratar de envolver esto para que use compresion con gzip
                 // Respuesta HTTP del servidor al cliente
                 string httpResponse = $"HTTP/1.1 200 OK\nContent-Type: text/html; charset=UTF-8\n\n{archivoDefault}";
@@ -152,12 +191,15 @@ class ServidorWebSimple
                 await stream.WriteAsync(response, 0, response.Length);
                 // Escribir respuesta en consola
                 Console.WriteLine($"\n**Respuesta enviada al cliente**.\nMensaje enviado:\n{httpResponse}\n --- fin del mensaje enviado ---\n\n");
+                */
             }
             else
             {
 
                 if (File.Exists(filePathCompleto))
                 {
+
+                    // Meter lo de abajo en la función EnviarRespuesta
                     // Leer el contenido del archivo existente como bytes
                     byte[] fileBytes = await File.ReadAllBytesAsync(filePathCompleto);
 
@@ -197,14 +239,20 @@ class ServidorWebSimple
                 }
                 else
                 {
-                    string archivoError = File.ReadAllText(Path.Combine(currentDirectory, rootDirectory, "error_404.html")).Trim();
+                    //string archivoError = File.ReadAllText(Path.Combine(currentDirectory, rootDirectory, "error_404.html")).Trim();
+                    string pathArchivoError = Path.Combine(currentDirectory, rootDirectory, "error_404.html");
+
+                    await EnviarRespuesta(pathArchivoError,stream);
                     
+                    // probar con la función EnviarRespuesta
                     // Respuesta HTTP del servidor al cliente
+                    /*
                     string httpResponse = $"HTTP/1.1 404 Not Found\nContent-Type: text/html; charset=UTF-8\n\n{archivoError}";
                     byte[] response = Encoding.UTF8.GetBytes(httpResponse);
                     await stream.WriteAsync(response, 0, response.Length);
                     // Escribir respuesta en consola
                     Console.WriteLine($"\n**Respuesta enviada al cliente**.\nMensaje enviado:\n{httpResponse}\n --- fin del mensaje enviado ---\n\n");
+                    */
 
                 }
             }
@@ -223,6 +271,45 @@ class ServidorWebSimple
         // Cerrar la conexión con el clienteTCP después de haber manejado la solicitud
         clienteTCP.Close();
         Console.WriteLine("Conexión cerrada.\n\n");
+    }
+
+
+    private static async Task EnviarRespuesta(string pathArchivo, NetworkStream stream)
+    {
+        // Leer el contenido del archivo existente como bytes
+        byte[] fileBytes = await File.ReadAllBytesAsync(pathArchivo);
+
+        // Crear una memoria en buffer para almacenar los datos comprimidos
+        using (var memoryStream = new MemoryStream())
+        {
+            // Usar GZipStream para comprimir los datos y escribirlos en la memoria en buffer
+            using (var gzipStream = new GZipStream(memoryStream, CompressionMode.Compress))
+            {
+                await gzipStream.WriteAsync(fileBytes, 0, fileBytes.Length);
+            }
+
+            // Convertir el contenido comprimido a un array de bytes
+            byte[] compressedBytes = memoryStream.ToArray();
+
+            // incluir la respuesta HTTP con los encabezados necesarios
+            string httpResponseHeaders = "HTTP/1.1 200 OK\r\n" +
+                                  "Content-Encoding: gzip\r\n" +
+                                  "Content-Type: text/html; charset=UTF-8\r\n" +
+                                  $"Content-Length: {compressedBytes.Length}\r\n" +
+                                  "\r\n";
+
+            // Convertir los encabezados HTTP a bytes
+            byte[] responseHeaders = Encoding.UTF8.GetBytes(httpResponseHeaders);
+
+            // Enviar los encabezados HTTP al cliente
+            await stream.WriteAsync(responseHeaders, 0, responseHeaders.Length);
+
+            // Enviar el contenido comprimido al cliente
+            await stream.WriteAsync(compressedBytes, 0, compressedBytes.Length);
+
+            // Escribir respuesta en consola
+            Console.WriteLine($"\n**Respuesta enviada al cliente**.\nEncabezados enviados:\n{httpResponseHeaders}\n --- fin de los encabezados enviados ---\n\n");
+        }
     }
 
 
