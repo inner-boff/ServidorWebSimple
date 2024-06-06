@@ -5,8 +5,8 @@ using System.IO; // Espacio de nombres para clases que permiten la manipulación
 using System.Text; // Espacio de nombres para clases que permiten la manipulación de texto.
 using System.Threading.Tasks; // Espacio de nombres para clases relacionadas con tareas asincrónicas.
 using System.IO.Compression;
-using System.Runtime.CompilerServices;
-using System.IO.Enumeration; // Espacio de nombres para clases que permiten la compresión de archivos.
+//using System.Runtime.CompilerServices;
+//using System.IO.Enumeration; 
 
 
 class ServidorWebSimple
@@ -18,13 +18,13 @@ class ServidorWebSimple
     private static TcpClient clienteTCP;
     private static string currentDirectory;
     //Agregado para el manejo de la conexión, pero no estoy segura si hace falta
-    private static NetworkStream stream;
+    //private static NetworkStream stream;
 
     // añadidos para la compresión
-    private static byte[] fileBytes;
-    private static MemoryStream compressedStream;
-    private static GZipStream gzipStream;
-    private static byte[] compressedBytes;
+    //private static byte[] fileBytes;
+    //private static MemoryStream compressedStream;
+    //private static GZipStream gzipStream;
+    //private static byte[] compressedBytes;
     
 
     // Método Main asíncrono
@@ -52,6 +52,11 @@ class ServidorWebSimple
                 // El método AcceptTcpClientAsync() devuelve un objeto TcpClient que representa al clienteTCP conectado
                 // Este loop hace que el servidor pueda aceptar múltiples conexiones
                 clienteTCP = await servidor.AcceptTcpClientAsync();
+
+                // Nueva variable para los logs
+                // Obtener la dirección IP del clienteTCP conectado
+                string clientIP = ((IPEndPoint)clienteTCP.Client.RemoteEndPoint).Address.ToString();
+
                 Console.WriteLine("¡Cliente conectado!");
 
 
@@ -65,7 +70,9 @@ class ServidorWebSimple
                 string httpRequest = Encoding.UTF8.GetString(buffer, 0, bytes);
                 Console.WriteLine($"Mensaje recibido:\n{httpRequest}--- fin del mensaje recibido ---\n\n");
                 // probar si se puede llamar a la función ManejarSolicitud() sin el task.run
-                ManejarSolicitud(httpRequest,stream);
+
+                // NUEVO - agregar el clientIP para loguear la IP del clienteTCP
+                ManejarSolicitud(httpRequest,stream, clientIP);
                 //_ = Task.Run(() => ManejarSolicitud(httpRequest,stream));
             }
         }
@@ -83,7 +90,8 @@ class ServidorWebSimple
         Console.WriteLine($"Escuchando en puerto {port}, sirviendo desde {rootDirectory}, esperando solicitudes...\n\n");
     }
 
-    private static async Task ManejarSolicitud(string httpRequest, NetworkStream stream)
+    // NUEVO - Agregado patrámetro de clientIP para loguear la IP del clienteTCP
+    private static async Task ManejarSolicitud(string httpRequest, NetworkStream stream, string clientIP)
     {
         Console.WriteLine("Manejando solicitud del clienteTCP...");
 
@@ -102,6 +110,9 @@ class ServidorWebSimple
         // Corregir para que incluya el directorio actual
         // Corregido: el problema estaba en que no estaba sumando el current directory al path porque Path.Combine no lo hace si está presente un / en el path (en este caso lo tenía porque venía de la solicitud http)
         string filePathCompleto = Path.Combine(currentDirectory, rootDirectory, fileName);
+
+        // Llama a la función para loguear datos de la solicitud
+        LoguearSolicitud(clientIP, method, path);
 
         /*
       * Una solicitud se ve así (para tener referencia de lo que stá pasando arriba):
@@ -227,13 +238,22 @@ class ServidorWebSimple
         }
     }
 
+    // NUEVO - Función para loguear datos de la solicitud
+    // Se pueden agregar otros datos si queremos
+    // Chequear los requerimientos del ejercicio
+    private static void LoguearSolicitud(string clientIP, string method, string path)
+    {
+        string logDirectory = Path.Combine(currentDirectory, "logs");
+        if (!Directory.Exists(logDirectory))
+        {
+            Directory.CreateDirectory(logDirectory);
+        }
 
+        string logFilePath = Path.Combine(logDirectory, $"{DateTime.Now:yyyy-MM-dd}.log");
+        string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - IP: {clientIP} - Method: {method} - Path: {path}{Environment.NewLine}";
 
-    // Función que loguea datos de las solicitudes y respuestas segun el tipo de solicitud GET o POST
-    // Debe loguear la fecha y hora de la solicitud, el método, la ruta, el código de respuesta y el tamaño de la respuesta
-    // Debe loguear en un archivo de texto
-    // Debe crear un archivo por día para los logs de ese día
-
+        File.AppendAllText(logFilePath, logEntry);
+    }
 
 
 
