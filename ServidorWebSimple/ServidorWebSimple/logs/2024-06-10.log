@@ -1,0 +1,9 @@
+2024-06-10 18:34:56 - IP: 127.0.0.1 - Method: GET - Path: /prueba2.html
+2024-06-10 18:35:01 - IP: 127.0.0.1 - Method: GET - Path: /prueba.html
+2024-06-10 18:35:05 - IP: 127.0.0.1 - Method: GET - Path: /
+2024-06-10 18:35:09 - IP: 127.0.0.1 - Method: GET - Path: /h
+2024-06-10 18:35:29 - IP: 127.0.0.1 - Method: POST - Path: /prueba_post_desde_postman
+2024-06-10 18:39:52 - IP: 127.0.0.1 - Method: GET - Path: /prueba_post_desde_postman
+2024-06-10 18:40:01 - IP: 127.0.0.1 - Method: GET - Path: /
+2024-06-10 18:56:34 - IP: 127.0.0.1 - Method: GET - Path: /
+2024-06-10 18:56:45 - IP: 127.0.0.1 - Method: GET - Path: /prueba.html

@@ -17,3 +17,9 @@
 2024-06-06 15:35:27 - IP: 127.0.0.1 - Method: GET - Path: /hola!
 2024-06-06 18:22:42 - IP: 127.0.0.1 - Method: GET - Path: /h
 2024-06-06 18:22:47 - IP: 127.0.0.1 - Method: GET - Path: /
+2024-06-06 18:27:48 - IP: 127.0.0.1 - Method: GET - Path: /test2
+2024-06-06 21:20:53 - IP: 127.0.0.1 - Method: GET - Path: /
+2024-06-06 21:21:18 - IP: 127.0.0.1 - Method: GET - Path: /prueba.html
+2024-06-06 21:22:50 - IP: 127.0.0.1 - Method: GET - Path: /prueba2.html
+2024-06-06 21:23:06 - IP: 127.0.0.1 - Method: GET - Path: /ggdffgd
+2024-06-06 21:24:43 - IP: 127.0.0.1 - Method: POST - Path: /ggdffgd
