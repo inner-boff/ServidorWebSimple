@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using System.Text; // Espacio de nombres para clases que permiten la manipulación de texto.
+using System.Text; 
 using System.IO.Compression;
 
 
@@ -63,6 +63,9 @@ class ServidorWebSimple
     }
 
 
+    // CONFIRMAR si es necesario que esta función sea async
+    // Yo diría que no porque el servidor se inicia una sola vez y no depende de nada más
+    //private static async Task IniciarServidor()
     private static void IniciarServidor()
     {
         servidor = new TcpListener(localIPAddress, port);
@@ -70,7 +73,7 @@ class ServidorWebSimple
         Console.WriteLine($"Escuchando en puerto {port}, sirviendo desde {rootDirectory}, esperando solicitudes...\n\n");
     }
 
-  
+    // Este método sí tiene sentido que sea async porque depende de la conexión con el clienteTCP
     private static async Task ManejarSolicitud(string httpRequest, NetworkStream stream, string clientIP)
     {
         Console.WriteLine("Manejando solicitud del clienteTCP...");
@@ -79,14 +82,36 @@ class ServidorWebSimple
         string[] requestLines = httpRequest.Split('\n');
         string[] requestLineParts = requestLines[0].Split(' ');
         string method = requestLineParts[0];
-        string path = requestLineParts[1];
-        string fileName = path.TrimStart('/');
+        // NUEVO - Comento este path proque va a ser reemplazado por el que se obtiene de la url
+        // Hay que declararlo como fullPath para poder separarlo en path y parametrosConsulta
+        //string path = requestLineParts[1];
+        string fullPath = requestLineParts[1];
 
+        // NUEVO - extraer ruta y parámetros de la solicitud por url
+        string path = fullPath.Split('?')[0];
+        // NUEVO - Si la url contiene parámetros, se extraen
+        // EXPLICAR LOS METODOS USADOS PARA OBTENER LOS PARAMETROS DE LA URL
+        string parametrosConsulta = fullPath.Contains('?') ? fullPath.Split('?')[1] : "";
+
+
+        /*
+        Ejemplos para armar consultas y verificar que se loguean
+
+        -En la URL desde el navegador
+        http://localhost:7575/index.html?nombre=Pedro&edad=22
+        (sustituir nombre y edad por los parámetros y valores deseados e index.html por el archivo deseado o dejar vacío para el archivo por defecto)
+
+        -Desde Postman
+        Llenar los campos key/value en params al hacer la solicitud GET
+        */
+
+        string fileName = path.TrimStart('/');
         // Combinar el directorio actual, el directorio raíz y la ruta para obtener la ruta completa del archivo
         string filePathCompleto = Path.Combine(currentDirectory, rootDirectory, fileName);
 
         // Llama a la función para loguear datos de la solicitud
-        LoguearSolicitud(clientIP, method, path);
+        // NUEVO - Se agregan los parámetros de la consulta a los datos que se loguean
+        LoguearSolicitud(clientIP, method, path, parametrosConsulta);
 
         
         // Manejar la solicitud según el método (GET o POST)
@@ -177,7 +202,8 @@ class ServidorWebSimple
         }
     }
 
-    private static void LoguearSolicitud(string clientIP, string method, string path)
+    // NUEVO - Se agrega el parámetro parametrosConsulta a lo que se va a loguear
+    private static void LoguearSolicitud(string clientIP, string method, string path, string parametrosConsulta)
     {
         string logDirectory = Path.Combine(currentDirectory, "logs");
         if (!Directory.Exists(logDirectory))
@@ -186,7 +212,8 @@ class ServidorWebSimple
         }
 
         string logFilePath = Path.Combine(logDirectory, $"{DateTime.Now:yyyy-MM-dd}.log");
-        string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - IP: {clientIP} - Method: {method} - Path: {path}{Environment.NewLine}";
+        // EXPLICAR COMO FUNCIONA ENVIRONMENT.NEWLINE
+        string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - IP: {clientIP} - Method: {method} - Path: {path} - Parametros de Consulta: {parametrosConsulta}{Environment.NewLine}";
 
         File.AppendAllText(logFilePath, logEntry);
     }

@@ -7,3 +7,18 @@
 2024-06-10 18:40:01 - IP: 127.0.0.1 - Method: GET - Path: /
 2024-06-10 18:56:34 - IP: 127.0.0.1 - Method: GET - Path: /
 2024-06-10 18:56:45 - IP: 127.0.0.1 - Method: GET - Path: /prueba.html
+2024-06-10 21:14:56 - IP: 127.0.0.1 - Method: GET - Path: /prueba2.html - Parametros de Consulta: 
+2024-06-10 21:15:01 - IP: 127.0.0.1 - Method: GET - Path: / - Parametros de Consulta: 
+2024-06-10 21:15:40 - IP: 127.0.0.1 - Method: GET - Path: / - Parametros de Consulta: 
+2024-06-10 21:15:48 - IP: 127.0.0.1 - Method: GET - Path: / - Parametros de Consulta: 
+2024-06-10 21:15:56 - IP: 127.0.0.1 - Method: POST - Path: / - Parametros de Consulta: 
+2024-06-10 21:24:09 - IP: 127.0.0.1 - Method: POST - Path: / - Parametros de Consulta: 
+2024-06-10 21:24:30 - IP: 127.0.0.1 - Method: GET - Path: / - Parametros de Consulta: 
+2024-06-10 21:25:21 - IP: 127.0.0.1 - Method: GET - Path: / - Parametros de Consulta: 
+2024-06-10 21:25:51 - IP: 127.0.0.1 - Method: GET - Path: /hola! - Parametros de Consulta: 
+2024-06-10 21:31:35 - IP: 127.0.0.1 - Method: GET - Path: /prueba.html - Parametros de Consulta: 
+2024-06-10 21:32:52 - IP: 127.0.0.1 - Method: GET - Path: /prueba.html - Parametros de Consulta: 
+2024-06-10 21:41:54 - IP: 127.0.0.1 - Method: GET - Path: /prueba.html - Parametros de Consulta: nombre=Ana&edad=45
+2024-06-10 21:42:15 - IP: 127.0.0.1 - Method: GET - Path: / - Parametros de Consulta: nombre=Juan&edad=22
+2024-06-10 21:42:22 - IP: 127.0.0.1 - Method: GET - Path: /fff - Parametros de Consulta: nombre=Juan&edad=22
+2024-06-10 21:42:46 - IP: 127.0.0.1 - Method: GET - Path: /prueba2.html - Parametros de Consulta: nombre=Pepe&edad=5
