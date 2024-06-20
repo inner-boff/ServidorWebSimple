@@ -18,19 +18,15 @@ class ServidorWebSimple
     {
         // Obtener el directorio actual y el directorio raíz de los archivos a servir
         currentDirectory = Directory.GetCurrentDirectory();
-        // PRUEBA DE LECTURA - BORRAR ANTES DE ENTREGAR
-        //Console.WriteLine($"PRUEBA DE LECTURA - Directorio actual: {currentDirectory}");
         rootDirectory = File.ReadAllText(Path.Combine(currentDirectory, "configuracion", "archivos_config.txt")).Trim();
         port = int.Parse(File.ReadAllText(Path.Combine(currentDirectory, "configuracion", "puerto_config.txt")).Trim());
 
         // Bloque try-catch para manejar excepciones de conexión al iniciar el servidor
-        // Evita que se cierre el programa si hay un error
         try
         {
             IniciarServidor();
 
             // Bucle infinito para esperar a que los clientesTCP se conecten
-            // Este loop hace que el servidor pueda aceptar múltiples conexiones --> CONCURRENCIA
              while (true)
             {
                 // Esperar a que un clienteTCP se conecte
@@ -47,6 +43,7 @@ class ServidorWebSimple
                 // Obtener el stream de la conexión con el cliente
                 NetworkStream stream = clienteTCP.GetStream();
                 byte[] buffer = new byte[1024];
+
                 // Esperar a que el cliente envíe datos
                 int bytes = await stream.ReadAsync(buffer, 0, buffer.Length);
                 string httpRequest = Encoding.UTF8.GetString(buffer, 0, bytes);
@@ -63,9 +60,9 @@ class ServidorWebSimple
     }
 
 
-    // CONFIRMAR si es necesario que esta función sea async
+    // CONFIRMAR si es necesario que esta función sea async o no
     // Yo diría que no porque el servidor se inicia una sola vez y no depende de nada más
-    //private static async Task IniciarServidor()
+    // private static async Task IniciarServidor()
     private static void IniciarServidor()
     {
         servidor = new TcpListener(localIPAddress, port);
@@ -78,19 +75,18 @@ class ServidorWebSimple
     {
         Console.WriteLine("Manejando solicitud del clienteTCP...");
 
-        // Separar la solicitud en líneas y partes para obtener datos de la solicitud
+        // Declarar variables para guardadr los datos de la solicitud
+        // Separar la solicitud en líneas - cada linea es un string en un array de strings:
         string[] requestLines = httpRequest.Split('\n');
+        // Separar la primera línea de la solicitud en sus partes separadas por ' ' (método, ruta, versión HTTP):
         string[] requestLineParts = requestLines[0].Split(' ');
+        // Guardar el método, la ruta y la versión HTTP de la solicitud
         string method = requestLineParts[0];
-        // NUEVO - Comento este path proque va a ser reemplazado por el que se obtiene de la url
-        // Hay que declararlo como fullPath para poder separarlo en path y parametrosConsulta
-        //string path = requestLineParts[1];
         string fullPath = requestLineParts[1];
-
-        // NUEVO - extraer ruta y parámetros de la solicitud por url
+        string httpVersion = requestLineParts[2];
+        // Ruta de recurso solicitado: lo que está antes del '?' en la URL
         string path = fullPath.Split('?')[0];
-        // NUEVO - Si la url contiene parámetros, se extraen
-        // EXPLICAR LOS METODOS USADOS PARA OBTENER LOS PARAMETROS DE LA URL
+        // Si contiene parametros (se verifica si contiene el caracter '?') los extrae, si no, deja un string vacio
         string parametrosConsulta = fullPath.Contains('?') ? fullPath.Split('?')[1] : "";
 
 
@@ -105,13 +101,13 @@ class ServidorWebSimple
         Llenar los campos key/value en params al hacer la solicitud GET
         */
 
+        // Eliminar el caracter '/' del inicio de la ruta para obtener el nombre del archivo solicitado
         string fileName = path.TrimStart('/');
         // Combinar el directorio actual, el directorio raíz y la ruta para obtener la ruta completa del archivo
         string filePathCompleto = Path.Combine(currentDirectory, rootDirectory, fileName);
 
         // Llama a la función para loguear datos de la solicitud
-        // NUEVO - Se agregan los parámetros de la consulta a los datos que se loguean
-        LoguearSolicitud(clientIP, method, path, parametrosConsulta);
+        LoguearSolicitud(clientIP, method, path, httpVersion, parametrosConsulta);
 
         
         // Manejar la solicitud según el método (GET o POST)
@@ -137,6 +133,7 @@ class ServidorWebSimple
                 {
                     // Si el archivo solicitado no existe, enviar archivo personalizado con error 404
                     string pathArchivoError = Path.Combine(currentDirectory, rootDirectory, "error_404.html");
+                    // PENDIENTE - modificar funcion existente o crear una nueva para que el header sea 404 en caso de archivo no encontrado
                     await EnviarRespuesta(pathArchivoError,stream);
                     
 
@@ -161,6 +158,7 @@ class ServidorWebSimple
 
     // Función para enviar respuesta al cliente comprimida en con GZIP
     // TAREA - Buscar una manera de probar que la respuesta se envía comprimida
+    // TAREA - Modificar para que cuando el cliente solicite un archivo no existente, envíe un header código 404
     private static async Task EnviarRespuesta(string pathArchivo, NetworkStream stream)
     {
         // Leer el contenido del archivo existente como bytes
@@ -202,8 +200,8 @@ class ServidorWebSimple
         }
     }
 
-    // NUEVO - Se agrega el parámetro parametrosConsulta a lo que se va a loguear
-    private static void LoguearSolicitud(string clientIP, string method, string path, string parametrosConsulta)
+    // Función para loguear los datos de la solicitud
+    private static void LoguearSolicitud(string clientIP, string method, string path, string httpVersion, string parametrosConsulta)
     {
         string logDirectory = Path.Combine(currentDirectory, "logs");
         if (!Directory.Exists(logDirectory))
@@ -213,7 +211,7 @@ class ServidorWebSimple
 
         string logFilePath = Path.Combine(logDirectory, $"{DateTime.Now:yyyy-MM-dd}.log");
         // EXPLICAR COMO FUNCIONA ENVIRONMENT.NEWLINE
-        string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - IP: {clientIP} - Method: {method} - Path: {path} - Parametros de Consulta: {parametrosConsulta}{Environment.NewLine}";
+        string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - IP: {clientIP} - Method: {method} - Path: {path} - Protocol: {httpVersion} -Parametros de Consulta: {parametrosConsulta}{Environment.NewLine}";
 
         File.AppendAllText(logFilePath, logEntry);
     }

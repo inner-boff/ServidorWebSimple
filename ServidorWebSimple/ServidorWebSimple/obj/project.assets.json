@@ -13,11 +13,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\pamel\\OneDrive\\Documentos\\pame\\IFTS11\\2024_parte1\\ProgSobreRedes\\ProyectoFinal\\ServidorWeb\\ServidorWebSimple\\ServidorWebSimple\\ServidorWebSimple\\ServidorWebSimple.csproj",
+      "projectUniqueName": "C:\\Users\\pamel\\ProgRedesIFTS11\\ServidorWebSimple\\ServidorWebSimple\\ServidorWebSimple\\ServidorWebSimple.csproj",
       "projectName": "ServidorWebSimple",
-      "projectPath": "C:\\Users\\pamel\\OneDrive\\Documentos\\pame\\IFTS11\\2024_parte1\\ProgSobreRedes\\ProyectoFinal\\ServidorWeb\\ServidorWebSimple\\ServidorWebSimple\\ServidorWebSimple\\ServidorWebSimple.csproj",
+      "projectPath": "C:\\Users\\pamel\\ProgRedesIFTS11\\ServidorWebSimple\\ServidorWebSimple\\ServidorWebSimple\\ServidorWebSimple.csproj",
       "packagesPath": "C:\\Users\\pamel\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\pamel\\OneDrive\\Documentos\\pame\\IFTS11\\2024_parte1\\ProgSobreRedes\\ProyectoFinal\\ServidorWeb\\ServidorWebSimple\\ServidorWebSimple\\ServidorWebSimple\\obj\\",
+      "outputPath": "C:\\Users\\pamel\\ProgRedesIFTS11\\ServidorWebSimple\\ServidorWebSimple\\ServidorWebSimple\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\pamel\\AppData\\Roaming\\NuGet\\NuGet.Config",
