@@ -8,6 +8,7 @@ class ServidorWebSimple
 {
     private static string rootDirectory;
     private static int port;
+    // Revisar si esto es redundante o no
     private static IPAddress localIPAddress = IPAddress.Parse("127.0.0.1");
     private static TcpListener servidor;
     private static TcpClient clienteTCP;
@@ -17,8 +18,12 @@ class ServidorWebSimple
     static async Task Main(string[] args)
     {
         // Obtener el directorio actual y el directorio raíz de los archivos a servir
+        // Toma el nombre del directorio raíz de un archivo de configuración
         currentDirectory = Directory.GetCurrentDirectory();
         rootDirectory = File.ReadAllText(Path.Combine(currentDirectory, "configuracion", "archivos_config.txt")).Trim();
+
+        // Obtener el puerto de escucha del servidor
+        // Toma el puerto de un archivo de configuración
         port = int.Parse(File.ReadAllText(Path.Combine(currentDirectory, "configuracion", "puerto_config.txt")).Trim());
 
         // Bloque try-catch para manejar excepciones de conexión al iniciar el servidor
@@ -26,25 +31,19 @@ class ServidorWebSimple
         {
             IniciarServidor();
 
-            // Bucle infinito para esperar a que los clientesTCP se conecten
+            // Bucle infinito para esperar a que los clientesTCP se conecten y derivarlos a un hilo separado
              while (true)
             {
                 // Esperar a que un clienteTCP se conecte
                 clienteTCP = await servidor.AcceptTcpClientAsync();
-
                 
-                // Obtener la dirección IP del clienteTCP conectado para loguearla
+                // Obtener la dirección IP del clienteTCP conectado para loguearla luego
                 string clientIP = ((IPEndPoint)clienteTCP.Client.RemoteEndPoint).Address.ToString();
 
                 Console.WriteLine("¡Cliente conectado!");
 
-                // Llamar a la función para manejar la solicitud del clienteTCP
-                //await ManejarSolicitud(httpRequest,stream, clientIP);
-                // MODIFICADO - para manejar las solicitudes en hilos separados, es necesario usar Task.Run
-                // con la forma anterior (await) las solicitudes se manejaban en serie y por eso se rompía la conexión
-                // cuando se llena el buffer de lectura
+                // Llamar a la función para manejar la solicitud del clienteTCP en un hilo separado
                 _ = Task.Run(() => ManejarSolicitud(clienteTCP, clientIP));
-
             }
         }
         catch (Exception e)
@@ -53,10 +52,7 @@ class ServidorWebSimple
         }
     }
 
-
-    // CONFIRMAR si es necesario que esta función sea async o no
-    // Yo diría que no porque el servidor se inicia una sola vez y no depende de nada más
-    // private static async Task IniciarServidor()
+    // Método para iniciar el servidor en la dirección IP y puerto especificado
     private static void IniciarServidor()
     {
         servidor = new TcpListener(localIPAddress, port);
@@ -64,7 +60,12 @@ class ServidorWebSimple
         Console.WriteLine($"Escuchando en puerto {port}, sirviendo desde {rootDirectory}, esperando solicitudes...\n\n");
     }
 
-    // Este método sí tiene sentido que sea async porque se ejecuta cada vez que se recibe una solicitud
+    // Método para manejar la solicitud del clienteTCP:
+    // - Obtiene el stream de la conexión con el clienteTCP
+    // - Lee los datos enviados por el clienteTCP y arma la solicitud HTTP
+    // - Obtiene el método, la ruta y la versión del protocolo de la solicitud HTTP
+    // - Envía una respuesta al clienteTCP según el método (GET o POST)
+    // - Cierra la conexión con el clienteTCP
     private static async Task ManejarSolicitud(TcpClient clienteTCP, string clientIP)
     {
         Console.WriteLine("Manejando solicitud del clienteTCP...");
@@ -75,11 +76,10 @@ class ServidorWebSimple
 
         try 
         {
-
             // Esperar a que el cliente envíe datos
             int bytes = await stream.ReadAsync(buffer, 0, buffer.Length);
             string httpRequest = Encoding.UTF8.GetString(buffer, 0, bytes);
-            Console.WriteLine($"Mensaje recibido:\n{httpRequest}--- fin del mensaje recibido ---\n\n");    
+            Console.WriteLine($"**Mensaje recibido**\n{httpRequest}--- fin del mensaje recibido ---\n\n");    
 
             // Declarar variables para guardadr los datos de la solicitud
             // Separar la solicitud en líneas - cada linea es un string en un array de strings:
@@ -93,17 +93,17 @@ class ServidorWebSimple
             string fullPath = requestLineParts[1];
             string httpVersion = requestLineParts[2];
 
-            // Ruta de recurso solicitado: lo que está antes del '?' en la URL
-            string path = fullPath.Split('?')[0];
-
             // Si contiene parametros (se verifica si contiene el caracter '?') los extrae, si no, deja un string vacio
             string parametrosConsulta = fullPath.Contains('?') ? fullPath.Split('?')[1] : "";
 
-            // Eliminar el caracter '/' del inicio de la ruta para obtener el nombre del archivo solicitado
-            string fileName = path.TrimStart('/');
+            // Ruta de recurso solicitado: lo que está antes del '?' en la URL (si hay parametros de consulta)
+            string path = fullPath.Split('?')[0];
 
-            // Combinar el directorio actual, el directorio raíz y la ruta para obtener la ruta completa del archivo
-            string filePathCompleto = Path.Combine(currentDirectory, rootDirectory, fileName);
+            // Eliminar el caracter '/' del inicio de la ruta para obtener el nombre del archivo solicitado
+            string nombreArchivo = path.TrimStart('/');
+
+            // Combinar el directorio actual, el directorio raíz y el nombre del archivo para obtener la ruta completa del archivo
+            string filePathCompleto = Path.Combine(currentDirectory, rootDirectory, nombreArchivo);
 
             // Llama a la función para loguear datos de la solicitud
             LoguearSolicitud(clientIP, method, path, httpVersion, parametrosConsulta);
@@ -114,9 +114,10 @@ class ServidorWebSimple
             {
                 if (path == "/" || path == null)
                 {
-                        // Si la ruta solicitada es el directorio raiz o no se especifica nada, enviar archivo index.html por defecto
+                        // Si la ruta solicitada es el directorio raiz o no se especifica nada, 
+                        // enviar archivo index.html por defecto y código 200
                         string pathArchivoDefault = Path.Combine(currentDirectory, rootDirectory, "index.html");
-                        await EnviarRespuesta(pathArchivoDefault,stream);
+                        await EnviarRespuestaComprimida(pathArchivoDefault, stream, "200 OK"); 
 
                 }
                 else
@@ -124,16 +125,15 @@ class ServidorWebSimple
 
                     if (File.Exists(filePathCompleto))
                     {
-                        // Si el archivo solicitado existe, enviar el archivo
-                        await EnviarRespuesta(filePathCompleto,stream);
+                        // Si el archivo solicitado existe, enviar el archivo y código 200
+                        await EnviarRespuestaComprimida(filePathCompleto, stream, "200 OK");
 
                     }
                     else
                     {
-                        // Si el archivo solicitado no existe, enviar archivo personalizado con error 404
+                        // Si el archivo solicitado no existe, enviar archivo personalizado de error y código 404
                         string pathArchivoError = Path.Combine(currentDirectory, rootDirectory, "error_404.html");
-                        // PENDIENTE - modificar funcion existente o crear una nueva para que el header sea 404 en caso de archivo no encontrado
-                        await EnviarRespuesta(pathArchivoError,stream);
+                        await EnviarRespuestaComprimida(pathArchivoError, stream, "404 Not Found");
                     
 
                     }
@@ -142,16 +142,14 @@ class ServidorWebSimple
             else if (method == "POST")
             {
                 // Si el método es POST, enviar respuesta con código 201 Created
-                string httpResponse = $"HTTP/1.1 201 Created\nContent-Type: text/html; charset=UTF-8\n\n";
-                byte[] response = Encoding.UTF8.GetBytes(httpResponse);
-                await stream.WriteAsync(response, 0, response.Length);
-                // Escribir respuesta en consola
-                Console.WriteLine($"\n**Respuesta enviada al cliente**.\nMensaje enviado:\n{httpResponse}\n --- fin del mensaje enviado ---\n\n");
+                // No envía contenido, solo los encabezados de respuesta
+                await EnviarRespuestaComprimidaHTTP(stream, "201 Created");
             }
 
         }
         catch (Exception e)
         {
+            // Si ocurre un error, capturar la excepción y mostrar un mensaje en consola
             Console.WriteLine($"Error: {e.Message}");
         }
 
@@ -161,73 +159,89 @@ class ServidorWebSimple
             clienteTCP.Close();
             Console.WriteLine("Conexión cerrada.\n\n");
         }
-
     }
 
+    // Función para enviar respuesta al cliente
+    // - Toma el stream del cliente para enviar los encabezados
+    // - Toma el código de estado HTTP y el contenido (opcional) para incluir en los encabezados de respuesta
+    private static async Task EnviarRespuestaComprimidaHTTP(NetworkStream stream, string statusCode, byte[] content = null)
+    {
+        string httpResponseHeaders = $"HTTP/1.1 {statusCode}\r\n" +
+                                    "Content-Encoding: gzip\r\n" +
+                                    "Content-Type: text/html; charset=UTF-8\r\n" +
+                                    (content != null ? $"Content-Length: {content.Length}\r\n" : "") +
+                                    "\r\n";
 
-    // Función para enviar respuesta al cliente comprimida en con GZIP
-    // PENDIENTE - HAcer pruebas para verificar que la compresión funciona correctamente
-    // comparando el tamaño del archivo original con el comprimido
-    // PENDIENTE - Modificar para que cuando el cliente solicite un archivo no existente, envíe un header código 404
-    private static async Task EnviarRespuesta(string pathArchivo, NetworkStream stream)
+        // Convertir los encabezados HTTP a bytes
+        byte[] responseHeaders = Encoding.UTF8.GetBytes(httpResponseHeaders);
+
+        // Enviar los encabezados HTTP al cliente
+        await stream.WriteAsync(responseHeaders, 0, responseHeaders.Length);
+
+        // Enviar el contenido si existe
+        if (content != null)
+        {
+            await stream.WriteAsync(content, 0, content.Length);
+        }
+
+        // Escribir respuesta en consola
+        Console.WriteLine($"\n**Respuesta enviada al cliente**.\nEncabezados enviados:\n{httpResponseHeaders}\n --- fin de los encabezados enviados ---\n\n");
+    }
+
+    // Función para enviar archivo comprimido junto a los encabezados
+    private static async Task EnviarRespuestaComprimida(string pathArchivo, NetworkStream stream, string statusCode)
     {
         // Leer el contenido del archivo existente como bytes
         byte[] fileBytes = await File.ReadAllBytesAsync(pathArchivo);
+        // Guarda tamaño original del archivo para verificar que la compresión funciona correctamente
+        long tamanioOriginal = fileBytes.Length; 
 
         // Crear una memoria en buffer para almacenar los datos comprimidos
-        // todo este bloque es la compresión
         using (var memoryStream = new MemoryStream())
         {
             // Usar GZipStream para comprimir los datos y escribirlos en la memoria en buffer
-            // PENDIENTE - CONFIRMAR si es cierto que con "using" se hace automaticamente el dispose o probar/incluir codigo de lámina de clase 6
             using (var gzipStream = new GZipStream(memoryStream, CompressionMode.Compress))
             {
                 await gzipStream.WriteAsync(fileBytes, 0, fileBytes.Length);
-
             }
 
             // Convertir el contenido comprimido a un array de bytes
             byte[] compressedBytes = memoryStream.ToArray();
+            // Guarda tamaño comprimido del archivo para verificar que la compresión funciona correctamente
+            long tamanioComprimido = compressedBytes.Length; 
 
-            // incluir la respuesta HTTP con los encabezados necesarios
-            // PENDIENTE - Modificar para que cuando el cliente solicite un archivo no existente, envíe un header código 404
-            string httpResponseHeaders = "HTTP/1.1 200 OK\r\n" +
-                                  "Content-Encoding: gzip\r\n" +
-                                  "Content-Type: text/html; charset=UTF-8\r\n" +
-                                  $"Content-Length: {compressedBytes.Length}\r\n" +
-                                  "\r\n";
+            // Escribir en consola el tamaño del archivo original y el comprimido
+            // Nota: el tamaño comprimido debería ser menor
+            Console.WriteLine($"Tamaño del archivo original: {tamanioOriginal} bytes");
+            Console.WriteLine($"Tamaño del archivo comprimido: {tamanioComprimido} bytes\n\n");
 
-            // Convertir los encabezados HTTP a bytes
-            byte[] responseHeaders = Encoding.UTF8.GetBytes(httpResponseHeaders);
-
-            // Enviar los encabezados HTTP al cliente
-            await stream.WriteAsync(responseHeaders, 0, responseHeaders.Length);
-
-            // Enviar el contenido comprimido al cliente
-            await stream.WriteAsync(compressedBytes, 0, compressedBytes.Length);
-
-            // Escribir respuesta en consola
-            Console.WriteLine($"\n**Respuesta enviada al cliente**.\nEncabezados enviados:\n{httpResponseHeaders}\n --- fin de los encabezados enviados ---\n\n");
+            // Enviar la respuesta con el contenido comprimido
+            await EnviarRespuestaComprimidaHTTP(stream, statusCode, compressedBytes);
         }
     }
 
+   
     // Función para loguear los datos de la solicitud
     private static void LoguearSolicitud(string clientIP, string method, string path, string httpVersion, string parametrosConsulta)
     {
+        // Crear un directorio para almacenar los logs
         string logDirectory = Path.Combine(currentDirectory, "logs");
+
+        // Si el directorio no existe, crearlo
         if (!Directory.Exists(logDirectory))
         {
             Directory.CreateDirectory(logDirectory);
         }
 
+        // Crear un archivo de log con el nombre del día actual
         string logFilePath = Path.Combine(logDirectory, $"{DateTime.Now:yyyy-MM-dd}.log");
-        // PENDIENTE - Explicar qué hace Environment.NewLine
+
+        // Crear una entrada de log con los datos especificados de la solicitud
         string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - IP: {clientIP} - Method: {method} - Path: {path} - Protocol: {httpVersion} -Parametros de Consulta: {parametrosConsulta}{Environment.NewLine}";
 
+        // Abrir el archivo de log, agregar la entrada de log y cerrar el archivo
+        // Si el archivo no existe, lo crea y escribe la entrada de log y lo cierra
         File.AppendAllText(logFilePath, logEntry);
     }
-
-
-
 
 }
