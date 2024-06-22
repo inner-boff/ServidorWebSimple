@@ -8,7 +8,6 @@ class ServidorWebSimple
 {
     private static string rootDirectory;
     private static int port;
-    // Revisar si esto es redundante o no
     private static IPAddress localIPAddress = IPAddress.Parse("127.0.0.1");
     private static TcpListener servidor;
     private static TcpClient clienteTCP;

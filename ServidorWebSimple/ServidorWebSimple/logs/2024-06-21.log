@@ -1,0 +1,4 @@
+2024-06-21 21:41:13 - IP: 127.0.0.1 - Method: GET - Path: /errorrrrrrr - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-21 21:41:21 - IP: 127.0.0.1 - Method: GET - Path: / - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-21 21:41:32 - IP: 127.0.0.1 - Method: GET - Path: /prueba.html - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-21 21:41:40 - IP: 127.0.0.1 - Method: GET - Path: /prueba2.html - Protocol: HTTP/1.1 -Parametros de Consulta: 
