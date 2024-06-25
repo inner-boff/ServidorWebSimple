@@ -190,33 +190,32 @@ class ServidorWebSimple
     // Función para enviar archivo comprimido junto a los encabezados
     private static async Task EnviarRespuestaComprimida(string pathArchivo, NetworkStream stream, string statusCode)
     {
-        // Leer el contenido del archivo existente como bytes
-        byte[] fileBytes = await File.ReadAllBytesAsync(pathArchivo);
-        // Guarda tamaño original del archivo para verificar que la compresión funciona correctamente
-        long tamanioOriginal = fileBytes.Length; 
+            // Abrir FileStream para leer el archivo
+    using (FileStream fileStream = File.OpenRead(pathArchivo))
+    {
+        // Usar GZipStream para comprimir y enviar directamente al NetworkStream del cliente
+        using (var gzipStream = new GZipStream(stream, CompressionMode.Compress, true))
+        {
+            await fileStream.CopyToAsync(gzipStream); // Copiar directamente desde FileStream a GZipStream
+        }
+    }
 
-        // Crear una memoria en buffer para almacenar los datos comprimidos
+    // Escribir en consola que la respuesta fue enviada (opcional)
+    Console.WriteLine($"Respuesta comprimida enviada al cliente con estado: {statusCode}");
+
+       /* 
+        byte[] fileBytes = await File.ReadAllBytesAsync(pathArchivo);
+
         using (var memoryStream = new MemoryStream())
         {
-            // Usar GZipStream para comprimir los datos y escribirlos en la memoria en buffer
             using (var gzipStream = new GZipStream(memoryStream, CompressionMode.Compress))
             {
                 await gzipStream.WriteAsync(fileBytes, 0, fileBytes.Length);
             }
-
-            // Convertir el contenido comprimido a un array de bytes
             byte[] compressedBytes = memoryStream.ToArray();
-            // Guarda tamaño comprimido del archivo para verificar que la compresión funciona correctamente
-            long tamanioComprimido = compressedBytes.Length; 
-
-            // Escribir en consola el tamaño del archivo original y el comprimido
-            // Nota: el tamaño comprimido debería ser menor
-            Console.WriteLine($"Tamaño del archivo original: {tamanioOriginal} bytes");
-            Console.WriteLine($"Tamaño del archivo comprimido: {tamanioComprimido} bytes\n\n");
-
-            // Enviar la respuesta con el contenido comprimido
             await EnviarRespuestaComprimidaHTTP(stream, statusCode, compressedBytes);
         }
+        */
     }
 
    

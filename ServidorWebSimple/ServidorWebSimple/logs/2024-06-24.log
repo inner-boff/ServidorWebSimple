@@ -1,0 +1,16 @@
+2024-06-24 18:16:01 - IP: 127.0.0.1 - Method: GET - Path: /prueba2.html - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-24 18:16:12 - IP: 127.0.0.1 - Method: GET - Path: /test2 - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-24 18:16:18 - IP: 127.0.0.1 - Method: GET - Path: / - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-24 18:17:52 - IP: 127.0.0.1 - Method: GET - Path: / - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-24 19:51:34 - IP: 127.0.0.1 - Method: GET - Path: / - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-24 19:51:44 - IP: 127.0.0.1 - Method: GET - Path: /jjj - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-24 20:29:04 - IP: 127.0.0.1 - Method: GET - Path: / - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-24 20:33:09 - IP: 127.0.0.1 - Method: GET - Path: / - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-24 20:33:27 - IP: 127.0.0.1 - Method: GET - Path: /ggggg - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-24 21:03:32 - IP: 127.0.0.1 - Method: GET - Path: / - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-24 21:03:48 - IP: 127.0.0.1 - Method: GET - Path: / - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-24 21:03:48 - IP: 127.0.0.1 - Method: GET - Path: /styles.css - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-24 21:03:48 - IP: 127.0.0.1 - Method: GET - Path: /script.js - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-24 21:03:48 - IP: 127.0.0.1 - Method: GET - Path: /imagen.png - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-24 21:25:34 - IP: 127.0.0.1 - Method: GET - Path: /hhhh - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-24 21:25:50 - IP: 127.0.0.1 - Method: GET - Path: / - Protocol: HTTP/1.1 -Parametros de Consulta: 
