@@ -183,14 +183,12 @@ class ServidorWebSimple
     // Función para enviar archivo comprimido junto a los encabezados
     private static async Task EnviarRespuestaComprimida(string pathArchivo, NetworkStream stream, string statusCode)
     {
-
-
        // Abrir FileStream para leer el archivo
         using (FileStream fileStream = File.OpenRead(pathArchivo))
         {
-            // Crear un buffer para leer el archivo en partes
-            byte[] buffer = new byte[8192]; // Tamaño de buffer estándar
-            int bytesRead;
+            // Crear un buffer para leer el archivo en partes y un int para guardar la cantidad de bytes leídos
+            byte[] buffer = new byte[8192]; 
+            int bytesLeidos;
 
             // Crear un GZipStream para comprimir y enviar directamente al NetworkStream del cliente
             using (var gzipStream = new GZipStream(stream, CompressionMode.Compress, true))
@@ -199,10 +197,12 @@ class ServidorWebSimple
                 // Enviar los encabezados HTTP con el código de estado 
                 await EnviarRespuestaHTTP(stream, statusCode);
 
-                // Leer del archivo y escribir en el GZipStream en partes
-                while ((bytesRead = await fileStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                // Mientras los bytes leidos del buffer sean mayor que cero, se comprimen los datos para enviar al cliente
+                // Al leer todos los datos (fin del archivo, es decir, bytesLeidos = 0), se cierra el bucle
+                while ((bytesLeidos = await fileStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                 {
-                    await gzipStream.WriteAsync(buffer, 0, bytesRead);
+                    // Escribir los bytes leídos (bytesLeidos) del buffer en el GZipStream
+                    await gzipStream.WriteAsync(buffer, 0, bytesLeidos);
                 }
             }
         }
