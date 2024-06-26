@@ -142,7 +142,7 @@ class ServidorWebSimple
             {
                 // Si el método es POST, enviar respuesta con código 201 Created
                 // No envía contenido, solo los encabezados de respuesta
-                await EnviarRespuestaComprimidaHTTP(stream, "201 Created");
+                await EnviarRespuestaHTTP(stream, "201 Created");
             }
 
         }
@@ -163,7 +163,7 @@ class ServidorWebSimple
     // Función para enviar respuesta al cliente
     // - Toma el stream del cliente para enviar los encabezados
     // - Toma el código de estado HTTP y el contenido (opcional) para incluir en los encabezados de respuesta
-    private static async Task EnviarRespuestaComprimidaHTTP(NetworkStream stream, string statusCode, byte[] content = null)
+    private static async Task EnviarRespuestaHTTP(NetworkStream stream, string statusCode, byte[] content = null)
     {
         string httpResponseHeaders = $"HTTP/1.1 {statusCode}\r\n" +
                                     "Content-Encoding: gzip\r\n" +
@@ -190,32 +190,35 @@ class ServidorWebSimple
     // Función para enviar archivo comprimido junto a los encabezados
     private static async Task EnviarRespuestaComprimida(string pathArchivo, NetworkStream stream, string statusCode)
     {
-            // Abrir FileStream para leer el archivo
-    using (FileStream fileStream = File.OpenRead(pathArchivo))
-    {
-        // Usar GZipStream para comprimir y enviar directamente al NetworkStream del cliente
-        using (var gzipStream = new GZipStream(stream, CompressionMode.Compress, true))
+
+        // Leer el archivo en bytes - lo necesitaria para no dejar null la variable content que en este caso si existe
+        // Al eliminar memorystream no tenemos forma de capturar el tamaño del archivio para enviarlo en los encabezados
+
+       // Abrir FileStream para leer el archivo
+        using (FileStream fileStream = File.OpenRead(pathArchivo))
         {
-            await fileStream.CopyToAsync(gzipStream); // Copiar directamente desde FileStream a GZipStream
-        }
-    }
+            // Crear un buffer para leer el archivo en partes
+            byte[] buffer = new byte[8192]; // Tamaño de buffer estándar
+            int bytesRead;
 
-    // Escribir en consola que la respuesta fue enviada (opcional)
-    Console.WriteLine($"Respuesta comprimida enviada al cliente con estado: {statusCode}");
-
-       /* 
-        byte[] fileBytes = await File.ReadAllBytesAsync(pathArchivo);
-
-        using (var memoryStream = new MemoryStream())
-        {
-            using (var gzipStream = new GZipStream(memoryStream, CompressionMode.Compress))
+            // Crear un GZipStream para comprimir y enviar directamente al NetworkStream del cliente
+            using (var gzipStream = new GZipStream(stream, CompressionMode.Compress, true))
             {
-                await gzipStream.WriteAsync(fileBytes, 0, fileBytes.Length);
+
+                //await EnviarRespuestaHTTP(stream, statusCode, compressedBytes);
+                // Al eliminar memorystream no tenemos forma de capturar el tamaño del archivio para enviarlo en los encabezados
+                // Para mejorar, simplificar la función EnviarRespuestaHTTP para que no necesite el tamaño del archivo
+                await EnviarRespuestaHTTP(stream, statusCode, null);
+
+                // Leer del archivo y escribir en el GZipStream en partes
+                while ((bytesRead = await fileStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                {
+                    await gzipStream.WriteAsync(buffer, 0, bytesRead);
+                }
             }
-            byte[] compressedBytes = memoryStream.ToArray();
-            await EnviarRespuestaComprimidaHTTP(stream, statusCode, compressedBytes);
         }
-        */
+
+        Console.WriteLine($"Respuesta comprimida enviada al cliente con estado: {statusCode}");  
     }
 
    
