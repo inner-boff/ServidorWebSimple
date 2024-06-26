@@ -24,3 +24,9 @@
 2024-06-26 10:11:30 - IP: 127.0.0.1 - Method: GET - Path: /styles.css - Protocol: HTTP/1.1 -Parametros de Consulta: 
 2024-06-26 10:11:30 - IP: 127.0.0.1 - Method: GET - Path: /script.js - Protocol: HTTP/1.1 -Parametros de Consulta: 
 2024-06-26 10:11:30 - IP: 127.0.0.1 - Method: GET - Path: /imagen.png - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-26 10:19:37 - IP: 127.0.0.1 - Method: GET - Path: /u - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-26 10:19:40 - IP: 127.0.0.1 - Method: GET - Path: / - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-26 10:19:40 - IP: 127.0.0.1 - Method: GET - Path: /styles.css - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-26 10:19:40 - IP: 127.0.0.1 - Method: GET - Path: /script.js - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-26 10:19:40 - IP: 127.0.0.1 - Method: GET - Path: /imagen.png - Protocol: HTTP/1.1 -Parametros de Consulta: 
+2024-06-26 10:20:44 - IP: 127.0.0.1 - Method: GET - Path: /jj - Protocol: HTTP/1.1 -Parametros de Consulta: 

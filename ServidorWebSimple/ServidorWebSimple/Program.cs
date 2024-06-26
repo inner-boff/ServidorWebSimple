@@ -162,13 +162,13 @@ class ServidorWebSimple
 
     // Función para enviar respuesta al cliente
     // - Toma el stream del cliente para enviar los encabezados
-    // - Toma el código de estado HTTP y el contenido (opcional) para incluir en los encabezados de respuesta
-    private static async Task EnviarRespuestaHTTP(NetworkStream stream, string statusCode, byte[] content = null)
+    // - Toma el código de estado HTTP para incluir en los encabezados de respuesta
+    private static async Task EnviarRespuestaHTTP(NetworkStream stream, string statusCode)
     {
         string httpResponseHeaders = $"HTTP/1.1 {statusCode}\r\n" +
                                     "Content-Encoding: gzip\r\n" +
                                     "Content-Type: text/html; charset=UTF-8\r\n" +
-                                    (content != null ? $"Content-Length: {content.Length}\r\n" : "") +
+                                    //(content != null ? $"Content-Length: {content.Length}\r\n" : "") +
                                     "\r\n";
 
         // Convertir los encabezados HTTP a bytes
@@ -177,13 +177,6 @@ class ServidorWebSimple
         // Enviar los encabezados HTTP al cliente
         await stream.WriteAsync(responseHeaders, 0, responseHeaders.Length);
 
-        // Enviar el contenido si existe
-        if (content != null)
-        {
-            await stream.WriteAsync(content, 0, content.Length);
-        }
-
-        // Escribir respuesta en consola
         Console.WriteLine($"\n**Respuesta enviada al cliente**.\nEncabezados enviados:\n{httpResponseHeaders}\n --- fin de los encabezados enviados ---\n\n");
     }
 
@@ -191,8 +184,6 @@ class ServidorWebSimple
     private static async Task EnviarRespuestaComprimida(string pathArchivo, NetworkStream stream, string statusCode)
     {
 
-        // Leer el archivo en bytes - lo necesitaria para no dejar null la variable content que en este caso si existe
-        // Al eliminar memorystream no tenemos forma de capturar el tamaño del archivio para enviarlo en los encabezados
 
        // Abrir FileStream para leer el archivo
         using (FileStream fileStream = File.OpenRead(pathArchivo))
@@ -205,10 +196,8 @@ class ServidorWebSimple
             using (var gzipStream = new GZipStream(stream, CompressionMode.Compress, true))
             {
 
-                //await EnviarRespuestaHTTP(stream, statusCode, compressedBytes);
-                // Al eliminar memorystream no tenemos forma de capturar el tamaño del archivio para enviarlo en los encabezados
-                // Para mejorar, simplificar la función EnviarRespuestaHTTP para que no necesite el tamaño del archivo
-                await EnviarRespuestaHTTP(stream, statusCode, null);
+                // Enviar los encabezados HTTP con el código de estado 
+                await EnviarRespuestaHTTP(stream, statusCode);
 
                 // Leer del archivo y escribir en el GZipStream en partes
                 while ((bytesRead = await fileStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
